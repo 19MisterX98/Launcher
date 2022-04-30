@@ -15,6 +15,7 @@
 
 #include "Yggdrasil.h"
 #include "AccountData.h"
+#include "Parsers.h"
 
 #include <QObject>
 #include <QString>
@@ -211,6 +212,27 @@ void Yggdrasil::processResponse(QJsonObject responseData) {
 
     // We've made it through the minefield of possible errors. Return true to indicate that
     // we've succeeded.
+    m_data->minecraftProfile = MinecraftProfile();
+
+    QJsonObject user = responseData.value("selectedProfile").toObject();
+    if (user.isEmpty()) {
+        changeState(AccountTaskState::STATE_FAILED_SOFT, tr("Mojang account has no minecraft profiles"));
+        return;
+    }
+
+    if(!Parsers::getString(user.value("id"), m_data->minecraftProfile.id)) {
+        qWarning() << "Minecraft profile id is not a string";
+        return;
+    }
+
+    if(!Parsers::getString(user.value("name"), m_data->minecraftProfile.name)) {
+        qWarning() << "Minecraft profile name is not a string";
+        return;
+    }
+    m_data->minecraftProfile.validity = Katabasis::Validity::Certain;
+    m_data->minecraftEntitlement.canPlayMinecraft = true;
+    m_data->minecraftEntitlement.ownsMinecraft = true;
+
     qDebug() << "Finished reading authentication response.";
     changeState(AccountTaskState::STATE_SUCCEEDED);
 }
